@@ -15,14 +15,17 @@ $(TARGET): create_dirs
 	$(COMPILER) ./obj/$(OBJS) -o $(TARGET)
 	mv $(TARGET) ./bin/
 
-create_dirs: obj/$(OBJS)
+create_dirs:
 	mkdir -p $(DIRS)
 	-mv $(SRCS) ./src/
 	-mv $(SRCS:.c=.h) ./include/
-	@echo "Diretórios criados com sucesso!"
+	echo "Diretórios criados com sucesso!"
+	make obj/$(OBJS)
+
 # Como gerar arquivos .o a partir de .c
 obj/%.o: src/%.c
 	$(COMPILER) $(CFLAGS) -c $< -o $@
+	-mv $< ./src/
 	-mv $@ ./obj/
 
 src/%.c:
