@@ -9,10 +9,15 @@
  *****************************************************************************
  */
 
+#ifndef __INCLUDED_PACKET_H__
+#define __INCLUDED_PACKET_H__
+
 /*****************************************************************************
  * LIBRARY
  *****************************************************************************/
+#include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 
 /*****************************************************************************
  * MACROS 
@@ -38,9 +43,11 @@ typedef struct {
     char data[LENGTH];      // 1008B
 }Packet;
 
-void create_packet_SYN(Packet* packet, char* ip, int port, char* file_name);
-void create_packet_SYN_ACK(Packet* packet, char* ip, int port, char permission);
-void create_packet_SND(Packet* packet, char* ip, int port, char* data);
-void create_packet_ACK(Packet* packet, char* ip, int port, char* ack);
-void create_packet_FIN(Packet* packet, char* ip, int port);
-void create_packet_FIN_ACK(Packet* packet, char* ip, int port);
+void create_packet_SYN(Packet* packet, char* ip, int32_t port, char* file_name);
+void create_packet_SYN_ACK(Packet* packet, char* ip, int32_t port, char permission);
+void create_packet_SND(Packet* packet, char* data, int32_t seq_number);
+void create_packet_ACK(Packet* packet, int32_t ack);
+void create_packet_FIN(Packet* packet);
+void create_packet_FIN_ACK(Packet* packet);
+
+#endif // __INCLUDED_PACKET_H__
