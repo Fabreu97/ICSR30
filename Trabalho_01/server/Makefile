@@ -1,9 +1,10 @@
 
-COMPILER = gcc
-CFLAGS   = -Wall
-SRCS     = main.c
-OBJS     = $(SRCS:.c=.o)
-TARGET   = main
+COMPILER 	= gcc
+CFLAGS   	= -Wall -Iinclude
+SRCS     	= test.c
+OBJS     	= $(SRCS:.c=.o)
+INCLUDES 	= packet.h
+TARGET   	= main
 
 DIRS = "bin" "obj" "src" "include"
 
@@ -17,13 +18,13 @@ $(TARGET): create_dirs
 
 create_dirs:
 	mkdir -p $(DIRS)
-	-mv $(SRCS) ./src/
-	-mv $(SRCS:.c=.h) ./include/
-	echo "Diretórios criados com sucesso!"
-	make obj/$(OBJS)
+	-mv *.c ./src/
+	-mv $(INCLUDES) ./include/
+	@echo "Diretórios criados com sucesso!"
+	@make obj/$(OBJS)
 
 # Como gerar arquivos .o a partir de .c
-obj/%.o: src/%.c
+obj/%.o: src/%.c include/$(INCLUDES)
 	$(COMPILER) $(CFLAGS) -c $< -o $@
 	-mv $< ./src/
 	-mv $@ ./obj/
