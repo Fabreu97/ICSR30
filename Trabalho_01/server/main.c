@@ -38,17 +38,18 @@ int main() {
     printf("Servidor UDP esperando na porta %d...\n", PORT);
 
     // Esperar por dados
-    ssize_t bytes_received = recvfrom(sockfd, buffer, BUFFER_SIZE - 1, 0,
-                                      (struct sockaddr*)&client_addr, &addr_len);
-    if (bytes_received < 0) {
-        perror("recvfrom failed");
-        close(sockfd);
-        exit(EXIT_FAILURE);
+    while(1) {
+        ssize_t bytes_received = recvfrom(sockfd, buffer, BUFFER_SIZE - 1, 0,
+                                        (struct sockaddr*)&client_addr, &addr_len);
+        if (bytes_received < 0) {
+            perror("recvfrom failed");
+            close(sockfd);
+            exit(EXIT_FAILURE);
+        }
+
+        buffer[bytes_received] = '\0'; // Null-terminar a string
+        printf("Recebido do cliente: %s\n", buffer);
     }
-
-    buffer[bytes_received] = '\0'; // Null-terminar a string
-    printf("Recebido do cliente: %s\n", buffer);
-
     close(sockfd);
     return 0;
 }

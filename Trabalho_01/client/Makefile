@@ -1,9 +1,9 @@
 
 COMPILER 	= gcc
-CFLAGS   	= -Wall -Iinclude
+CFLAGS   	= -Wall -O2 -Iinclude
 SRCS     	= main.c
 OBJS     	= $(SRCS:.c=.o)
-INCLUDES 	= packet.h
+INCLUDES 	= 
 TARGET   	= main
 
 DIRS = "bin" "obj" "src" "include"
