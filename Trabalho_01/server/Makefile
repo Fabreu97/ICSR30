@@ -1,40 +1,32 @@
+COMPILER    = gcc
+CFLAGS      = -Wall -Iinclude
 
-COMPILER 	= gcc
-CFLAGS   	= -Wall -Iinclude
-SRCS     	= main.c
-OBJS     	= $(SRCS:.c=.o)
-INCLUDES 	= packet.h
-TARGET   	= main
+TARGET      = main
 
-DIRS = "bin" "obj" "src" "include"
+DIRS        = bin obj src include
 
 # Regra padrão (alvo padrão do make)
 all: $(TARGET)
 
-# Como gerar o executável
-$(TARGET): create_dirs
-	$(COMPILER) ./obj/$(OBJS) -o $(TARGET)
-	mv $(TARGET) ./bin/
-
 create_dirs:
 	mkdir -p $(DIRS)
+	-cp ../utils/*.h ./include/
+	-cp ../utils/*.c ./src/
 	-mv *.c ./src/
-	-mv $(INCLUDES) ./include/
+	-mv *.h ./include/
 	@echo "Diretórios criados com sucesso!"
-	@make obj/$(OBJS)
 
-# Como gerar arquivos .o a partir de .c
-obj/%.o: src/%.c include/$(INCLUDES)
-	$(COMPILER) $(CFLAGS) -c $< -o $@
-	-mv $< ./src/
-	-mv $@ ./obj/
+object_files_create:
+	gcc $(CFLAGS) -c src/packet.c -o obj/packet.o
+	gcc $(CFLAGS) -c src/main.c -o obj/main.o
 
-src/%.c:
-	$(COMPILER) $(CFLAGS) -c $< -o $@
-	-mv $@ ./obj/
+$(TARGET): create_dirs object_files_create
+	$(COMPILER) ./obj/main.o ./obj/packet.o -o $(TARGET)
+	mv $(TARGET) ./bin/
 
 run:
-	./bin/main
+	./bin/$(TARGET)
+
 
 # Limpar arquivos gerados
 clean:

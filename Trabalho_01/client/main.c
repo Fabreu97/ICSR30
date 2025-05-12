@@ -4,8 +4,11 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
+#include "packet.h"
+
 #define SERVER_IP "127.0.0.1"
 #define SERVER_PORT 12345
+#define PORT_CLIENT 12345
 
 int input_ip_and_port(char* ip, int* port, char* msg) {
     char input[100];
@@ -14,6 +17,7 @@ int input_ip_and_port(char* ip, int* port, char* msg) {
     printf("Digite o endereço IP do servidor: ");
     fgets(input, 100, stdin);
     if (strlen(input) <= 16) {
+        input[strlen(input) - 1] = '\0';
         strcpy(ip, input);
     } else {
         return 1; // Erro: IP muito longo
@@ -39,7 +43,6 @@ int main() {
     int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
     struct sockaddr_in server_addr;
 
-
     while(1) {
         erro = 1;
         while(erro) {
@@ -54,8 +57,14 @@ int main() {
             erro = 1;
         }
         if(!erro) {
+            Packet packet;
+            create_packet_SYN(&packet, ip, PORT_CLIENT, "arquivo.txt");
             ssize_t sent = sendto(socket_fd, message, strlen(message), 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
             printf("Mensagem enviada para o servidor: %s\n", message);
+            sent = sendto(socket_fd, &packet, sizeof(packet), 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
+            printf("Enviado pacote SYN: %s\n", packet.data);
+            ssize_t bytes_received = recvfrom(socket_fd, &packet, sizeof(packet), 0,NULL, NULL);
+            printf("Recebido pacote SYN_ACK: %s\n", packet.data);
         }
     }
     close(socket_fd);
