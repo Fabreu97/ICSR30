@@ -111,7 +111,7 @@ int main() {
                         erro = 1;
                         printf(" o pacote SYN_ACK retorno com SUCESSO.\n");
                     } else {
-                        printf(" o pacote SYN_ACK retorno com ERRADO.\n");
+                        printf(" o pacote SYN_ACK retorno com ERRO.\n");
                     }
                 }
             }
