@@ -51,6 +51,8 @@ void create_packet_ACK(Packet* packet, int32_t ack);
 void create_packet_FIN(Packet* packet);
 void create_packet_FIN_ACK(Packet* packet);
 
+void print_type_packet(Packet* packet);
+
 void getNetworkInfo(char* data, char* ip, int32_t* port, char* file_name);
 
 #endif // __INCLUDED_PACKET_H__

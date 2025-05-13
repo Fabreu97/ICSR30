@@ -58,15 +58,41 @@ void create_packet_ACK(Packet* packet, int32_t ack) {
     packet->data[0] = '\0';
 }
 
+void print_type_packet(Packet* packet) {
+    switch(packet->flags) {
+        case SYN:
+            printf("SYN\n");
+            break;
+        case SYN_ACK:
+            printf("SYN_ACK\n");
+            break;
+        case SND:
+            printf("SND\n");
+            break;
+        case ACK:
+            printf("ACK\n");
+            break;
+        case FIN:
+            printf("FIN\n");
+            break;
+        case FIN_ACK:
+            printf("FIN_ACK\n");
+            break;
+        default:
+            printf("Unknown packet type\n");
+    }
+}
+
 void getNetworkInfo(char* data, char* ip, int32_t* port, char* file_name) {
         unsigned int i = 0, j = 0;
-        char ip_port[6];
+        char ip_port[20];
         while(data[i] != ':') {
             ip[j++] = data[i++];
         }
+        ip[j] = '\0';
         i++;
         j=0;
-        while(data[i] != '/') {
+        while(data[i] != '/' && data[i] != '\0') {
             ip_port[j++] = data[i++];
         }
         i++;
@@ -76,4 +102,5 @@ void getNetworkInfo(char* data, char* ip, int32_t* port, char* file_name) {
         while(data[i] != '\0') {
             file_name[j++] = data[i++];
         }
+        file_name[j] = '\0';
 }

@@ -14,6 +14,7 @@ create_dirs:
 	-cp ../utils/*.c ./src/
 	-mv *.c ./src/
 	-mv *.h ./include/
+	-rm -f ./bin/*
 	@echo "Diretórios criados com sucesso!"
 
 object_files_create:
