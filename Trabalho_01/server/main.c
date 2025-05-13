@@ -11,7 +11,7 @@
 #define PORT 12345
 #define BUFFER_SIZE 1024
 
-char file_exists(char* file_name);
+bool file_exists(char* file_name);
 
 int main() {
     int socket_fd;
@@ -74,7 +74,12 @@ int main() {
         }
         // Pacote SYN enviado de forma correta
         // Enviando o pacote SYN_ACK
-        char permission = file_exists(file_name);
+        bool permission = file_exists(file_name);
+        if (permission) {
+            printf("Arquivo existe, enviando SYN_ACK\n");
+        } else {
+            printf("Arquivo não existe, enviando SYN_ACK\n");
+        }
         create_packet_SYN_ACK(&packet, IP_SERVER, PORT, permission);
         addr_len = sizeof(client_addr);
         sent = sendto(socket_fd, &packet, sizeof(packet), 0, (struct sockaddr*)&client_addr, addr_len);
@@ -89,28 +94,16 @@ int main() {
     return 0;
 }
 
-char file_exists(char* file_name) {
+bool file_exists(char* file_name) {
     char caminho[1024];
-    snprintf(caminho, sizeof(caminho), "%s/%s", "shared_file", file_name);
-
-    // Mostrar caminho relativo
-    printf("Caminho relativo: %s\n", caminho);
-
-    // Obter o diretório atual e criar o caminho absoluto
-    char cwd[256];
-    getcwd(cwd, sizeof(cwd));
-    printf("Diretório atual: %s\n", cwd);
-    
-    char caminho_absoluto[2048];
-    snprintf(caminho_absoluto, sizeof(caminho_absoluto), "%s/%s", cwd, caminho);
-    printf("Caminho absoluto: %s\n", caminho_absoluto);
-
+    snprintf(caminho, sizeof(caminho), "shared_file/%s", file_name);
     // Verifique o arquivo
-    if (access(caminho_absoluto, F_OK) == 0) {
-        return 1; // Arquivo existe
+    if (access(caminho, F_OK) != -1) {
+        printf("Arquivo encontrado!\n");
+        return true;
     } else {
-        perror("access falhou");
-        return 0; // Arquivo não existe
+        perror("Erro ao acessar o arquivo");
+        return false;
     }
 }
 

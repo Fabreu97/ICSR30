@@ -36,6 +36,7 @@ int input_ip_and_port_file(char* ip, int* port, char* file_name) {
     }
     printf("\nDigite o Arquivo para Download: ");
     fgets(file_name, 100, stdin);
+    file_name[strlen(file_name) - 1] = '\0'; // Remove o '\n' do final
 
     return 0;
 }
