@@ -19,7 +19,7 @@ void create_packet_SYN(Packet* packet, char* ip, int32_t port, char* file_name) 
     printf("PACOTE SYN: %s\n", packet->data);
 }
 
-void create_packet_SYN_ACK(Packet* packet, char* ip, int32_t port, char permission) {
+void create_packet_SYN_ACK(Packet* packet, char* ip, int32_t port, bool permission) {
     char data[1008] = "";
     char ip_port[16];
 
@@ -39,6 +39,7 @@ void create_packet_SYN_ACK(Packet* packet, char* ip, int32_t port, char permissi
     } else {
         packet->length = 0;
         packet->data[0] = 0;
+        packet->data[1] = '\0';
     }
 }
 

@@ -16,6 +16,7 @@
  * LIBRARY
  *****************************************************************************/
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -45,7 +46,7 @@ typedef struct {
 }Packet;
 
 void create_packet_SYN(Packet* packet, char* ip, int32_t port, char* file_name);
-void create_packet_SYN_ACK(Packet* packet, char* ip, int32_t port, char permission);
+void create_packet_SYN_ACK(Packet* packet, char* ip, int32_t port, bool permission);
 void create_packet_SND(Packet* packet, char* data, int32_t seq_number);
 void create_packet_ACK(Packet* packet, int32_t ack);
 void create_packet_FIN(Packet* packet);
