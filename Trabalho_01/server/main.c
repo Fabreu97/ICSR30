@@ -11,6 +11,8 @@
 #define PORT 12345
 #define BUFFER_SIZE 1024
 
+char file_exists(char* file_name);
+
 int main() {
     int socket_fd;
     struct sockaddr_in server_addr, client_addr;
@@ -72,7 +74,8 @@ int main() {
         }
         // Pacote SYN enviado de forma correta
         // Enviando o pacote SYN_ACK
-        create_packet_SYN_ACK(&packet, IP_SERVER, PORT, 1);
+        char permission = file_exists(file_name);
+        create_packet_SYN_ACK(&packet, IP_SERVER, PORT, permission);
         addr_len = sizeof(client_addr);
         sent = sendto(socket_fd, &packet, sizeof(packet), 0, (struct sockaddr*)&client_addr, addr_len);
         printf("\nEnviado o pacote SYN_ACK\n");
@@ -85,6 +88,19 @@ int main() {
     close(socket_fd);
     return 0;
 }
+
+char file_exists(char* file_name) {
+    char caminho[512];
+    snprintf(caminho, sizeof(caminho), "%s/%s", "shared_file", file_name);
+
+    // F_OK testa apenas a existência do arquivo
+    if (access(caminho, F_OK) == 0) {
+        return 1; // Existe
+    } else {
+        return 0; // Não existe
+    }
+}
+
         // Esperar receber eternamente um pacote SYN
 
         /*socklen_t bytes_received = recvfrom(socket_fd, buffer, BUFFER_SIZE - 1, 0,

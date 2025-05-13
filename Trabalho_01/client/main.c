@@ -34,7 +34,7 @@ int input_ip_and_port_file(char* ip, int* port, char* file_name) {
         printf("\nErro ao ler a porta. Tente novamente.\n");
         return 1;
     }
-    printf("\nDigite a mensagem: ");
+    printf("\nDigite o Arquivo para Download: ");
     fgets(file_name, 100, stdin);
 
     return 0;
@@ -107,7 +107,12 @@ int main() {
                     update_timeout(&timeout, start, end);
                     printf("Novo timeout: %ld.%06ld segundos\n", timeout.tv_sec, timeout.tv_usec);
                     setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)); // atualizo o timeout
-                    erro = 0;
+                    if (packet.flags == SYN_ACK && !packet.data[0]) {
+                        erro = 1;
+                        printf(" o pacote SYN_ACK retorno com ERRO.\n");
+                    } else {
+                        printf(" o pacote SYN_ACK retorno com SUCESSO.\n");
+                    }
                 }
             }
         }
