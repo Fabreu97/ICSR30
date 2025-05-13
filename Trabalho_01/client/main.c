@@ -107,7 +107,7 @@ int main() {
                     update_timeout(&timeout, start, end);
                     printf("Novo timeout: %ld.%06ld segundos\n", timeout.tv_sec, timeout.tv_usec);
                     setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)); // atualizo o timeout
-                    if (packet.flags == SYN_ACK && !packet.data[0]) {
+                    if (packet.flags == SYN_ACK && !(packet.data[0])) {
                         erro = 1;
                         printf(" o pacote SYN_ACK retorno com ERRO.\n");
                     } else {

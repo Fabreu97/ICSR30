@@ -94,9 +94,14 @@ char file_exists(char* file_name) {
     snprintf(caminho, sizeof(caminho), "%s/%s", "shared_file", file_name);
 
     // F_OK testa apenas a existência do arquivo
+    printf("%s\n", caminho);
+    char cwd[256];
+    getcwd(cwd, sizeof(cwd));
+    printf("Executando em: %s\n", cwd);
     if (access(caminho, F_OK) == 0) {
         return 1; // Existe
     } else {
+        perror("acess falhou\n");
         return 0; // Não existe
     }
 }
