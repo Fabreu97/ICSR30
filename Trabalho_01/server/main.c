@@ -90,19 +90,27 @@ int main() {
 }
 
 char file_exists(char* file_name) {
-    char caminho[512];
+    char caminho[1024];
     snprintf(caminho, sizeof(caminho), "%s/%s", "shared_file", file_name);
 
-    // F_OK testa apenas a existência do arquivo
-    printf("%s\n", caminho);
+    // Mostrar caminho relativo
+    printf("Caminho relativo: %s\n", caminho);
+
+    // Obter o diretório atual e criar o caminho absoluto
     char cwd[256];
     getcwd(cwd, sizeof(cwd));
-    printf("Executando em: %s\n", cwd);
-    if (access(caminho, F_OK) == 0) {
-        return 1; // Existe
+    printf("Diretório atual: %s\n", cwd);
+    
+    char caminho_absoluto[2048];
+    snprintf(caminho_absoluto, sizeof(caminho_absoluto), "%s/%s", cwd, caminho);
+    printf("Caminho absoluto: %s\n", caminho_absoluto);
+
+    // Verifique o arquivo
+    if (access(caminho_absoluto, F_OK) == 0) {
+        return 1; // Arquivo existe
     } else {
-        perror("acess falhou\n");
-        return 0; // Não existe
+        perror("access falhou");
+        return 0; // Arquivo não existe
     }
 }
 

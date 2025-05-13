@@ -38,7 +38,7 @@ void create_packet_SYN_ACK(Packet* packet, char* ip, int32_t port, char permissi
         //printf("PACOTE SYN_ACK: %s\n", packet->data);
     } else {
         packet->length = 0;
-        packet->data[0] = '\0';
+        packet->data[0] = 0;
     }
 }
 
