@@ -1,7 +1,7 @@
 #include "packet.h"
 
 void create_packet_SYN(Packet* packet, char* ip, int32_t port, char* file_name) {
-    char data[1008] = "";
+    char data[LENGTH] = "";
     char ip_port[16];
     snprintf(ip_port, sizeof(ip_port), "%d", port);
     packet->seq_number = 0;

@@ -123,15 +123,22 @@ int main() {
                 }
                 attempts++;
             }
+            printf("Recebido pacote do tipo %s com valor de ack = %d\n", packet.flags == ACK ? "ACK" : "Nao_e_ACK", packet.ack);
             bool  release = true;
             bytes_read = 1;
+            int largest_seq = 0;
             while(bytes_read > 0) {
+                //Identifico a requisição de pacote do cliente
                 ack_client = packet.ack;
+                //Faço a montagem do pacote
                 long file_size = ftell(file);
                 fseek(file, ack_client*LENGTH, SEEK_SET);
                 bytes_read = fread(buffer, sizeof(char), LENGTH, file);
                 // Enviar pacote SND
                 if (bytes_read > 0) {
+                    if(ack_client > largest_seq) {
+                        largest_seq = ack_client;
+                    }
                     packet.seq_number = ack_client;
                     packet.length = bytes_read;
                     packet.flags = SND;
@@ -141,18 +148,18 @@ int main() {
                     }
                     tamanho_bytes_totais_enviado += bytes_read;
                     sent = sendto(socket_fd, &packet, sizeof(packet), 0, (struct sockaddr*)&client_addr, (socklen_t)addr_len);
+                    printf("Enviado o pacote do tipo: ");
+                    print_type_packet(&packet);
+                    printf("SEQ_NUMBER: %d\n", packet.seq_number);
+                    printf("Tamanho do Pacote: %ld\n", bytes_read);
                 }
                 if (sent < 0) {
                     perror("Erro ao enviar pacote SND\n");
                 }
-                printf("Enviado o pacote do tipo: ");
-                print_type_packet(&packet);
-                printf("SEQ_NUMBER: %d\n", packet.seq_number);
-                printf("Tamanho do Pacote: %ld\n", bytes_read);
                 bytes_received = recvfrom(socket_fd, &packet, sizeof(packet), 0, (struct sockaddr*)&client_addr, (socklen_t*)&addr_len);
                 if (bytes_received < 0) {
                     release = false;
-                    perror("recvfrom failed\n");
+                    perror("Timeout de espera por mensagem. ACK\n");
                 } else {
                     release = true;
                     gettimeofday(&end, NULL);
@@ -168,7 +175,7 @@ int main() {
                 printf("Esperando o pacote do tipo: FIN_ACK do Cliente . . .\n");
                 bytes_received = recvfrom(socket_fd, &packet, sizeof(packet), 0, (struct sockaddr*)&client_addr, (socklen_t*)&addr_len);
                 if (bytes_received < 0) {
-                    perror("recvfrom failed aqui\n");
+                    perror("Timeout de espera por mensagem. FIN_ACK\n");
                 }
             }
             fclose(file);

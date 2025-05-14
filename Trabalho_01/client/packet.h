@@ -36,7 +36,7 @@
 #define FIN_ACK     6   // Outra parte confirma o fechamento da conexão
 
 // PAYLOAD SIZE
-#define LENGTH      1024 - sizeof(int32_t) * 4 // Length of the data in bytes 
+#define LENGTH      1024 - sizeof(int32_t) * 100 // Length of the data in bytes 
 
 #define SUCCESS     true
 #define FAILURE     false
