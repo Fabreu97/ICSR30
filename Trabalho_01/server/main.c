@@ -4,20 +4,26 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <sys/time.h>
+
 #include "packet.h"
+#include "utils.h"
 
 #define IP_SERVER "103.0.1.70"
 #define PORT 12345
 #define BUFFER_SIZE 1024
+#define MAX_ATTEMPTS 3
 
 bool file_exists(char* file_name);
 
 int main() {
+    unsigned int tamanho_bytes_totais_enviado = 0;
     int socket_fd;
     struct sockaddr_in server_addr, client_addr;
-    ssize_t bytes_reveived, sent;
+    ssize_t bytes_received, sent;
     socklen_t addr_len = sizeof(client_addr);
+    struct timeval timeout, start, end;
+    timeout.tv_sec = 1; // 1 segundo
+    timeout.tv_usec = 0; // 0 microssegundos
 
     // Criar socket UDP
     // AF_INET: IPv4
@@ -41,10 +47,11 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    printf("Servidor UDP esperando na porta %d...\n", PORT);
 
     // Esperar por dados
     while(1) {
+         printf("\n\nServidor UDP esperando na porta %d...\n", PORT);
+        int ack_client = 0;
         bool valid = false;
         Packet packet;
         packet.flags = -1;
@@ -54,10 +61,16 @@ int main() {
 
         addr_len = sizeof(client_addr);
 
+        // Retirar o timeout
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 0;
+        setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+
+
         // Esperar receber um pacote SYN
         while(packet.flags != SYN && !valid) {
-            bytes_reveived = recvfrom(socket_fd, &packet, sizeof(packet), 0, (struct sockaddr*)&client_addr, (socklen_t*)&addr_len);
-            if (bytes_reveived < 0) {
+            bytes_received = recvfrom(socket_fd, &packet, sizeof(packet), 0, (struct sockaddr*)&client_addr, (socklen_t*)&addr_len);
+            if (bytes_received < 0) {
                 perror("recvfrom failed\n");
                 close(socket_fd);
                 exit(EXIT_FAILURE);
@@ -75,11 +88,6 @@ int main() {
         // Pacote SYN enviado de forma correta
         // Enviando o pacote SYN_ACK
         bool permission = file_exists(file_name);
-        if (permission) {
-            printf("Arquivo existe, enviando SYN_ACK\n");
-        } else {
-            printf("Arquivo não existe, enviando SYN_ACK\n");
-        }
         create_packet_SYN_ACK(&packet, IP_SERVER, PORT, permission);
         addr_len = sizeof(client_addr);
         sent = sendto(socket_fd, &packet, sizeof(packet), 0, (struct sockaddr*)&client_addr, addr_len);
@@ -88,6 +96,86 @@ int main() {
             perror("Erro ao enviar resposta\n");
             close(socket_fd);
             exit(EXIT_FAILURE);
+        }
+        // Cada ACK recebido do cliente enviar um pacote SND com dados do arquivo
+        if(permission) {
+            char caminho[1024];
+            char buffer[LENGTH];
+            size_t bytes_read;
+
+            snprintf(caminho, sizeof(caminho), "shared_file/%s", file_name);
+            FILE* file = fopen(caminho, "rb");
+            if (file == NULL) {
+                perror("Erro ao abrir o arquivo");
+                close(socket_fd);
+                exit(EXIT_FAILURE);
+            }
+            ack_client = 0;
+            timeout.tv_sec = INITIAL_TIMEOUT_SEC;
+            timeout.tv_usec = 0;
+            setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+            unsigned short int attempts = 0;
+            packet.flags = -1;
+            while(attempts < MAX_ATTEMPTS && packet.flags != ACK) {
+                bytes_received = recvfrom(socket_fd, &packet, sizeof(packet), 0, (struct sockaddr*)&client_addr, (socklen_t*)&addr_len);
+                if(bytes_received < 0) {
+                    perror("recvfrom failed\n");
+                }
+                attempts++;
+            }
+            bool  release = true;
+            bytes_read = 1;
+            while(bytes_read > 0) {
+                ack_client = packet.ack;
+                long file_size = ftell(file);
+                fseek(file, ack_client*LENGTH, SEEK_SET);
+                bytes_read = fread(buffer, sizeof(char), LENGTH, file);
+                // Enviar pacote SND
+                if (bytes_read > 0) {
+                    packet.seq_number = ack_client;
+                    packet.length = bytes_read;
+                    packet.flags = SND;
+                    memcpy(packet.data, buffer, bytes_read);
+                    if (release) {
+                        gettimeofday(&start, NULL);
+                    }
+                    tamanho_bytes_totais_enviado += bytes_read;
+                    sent = sendto(socket_fd, &packet, sizeof(packet), 0, (struct sockaddr*)&client_addr, (socklen_t)addr_len);
+                }
+                if (sent < 0) {
+                    perror("Erro ao enviar pacote SND\n");
+                }
+                printf("Enviado o pacote do tipo: ");
+                print_type_packet(&packet);
+                printf("SEQ_NUMBER: %d\n", packet.seq_number);
+                printf("Tamanho do Pacote: %ld\n", bytes_read);
+                bytes_received = recvfrom(socket_fd, &packet, sizeof(packet), 0, (struct sockaddr*)&client_addr, (socklen_t*)&addr_len);
+                if (bytes_received < 0) {
+                    release = false;
+                    perror("recvfrom failed\n");
+                } else {
+                    release = true;
+                    gettimeofday(&end, NULL);
+                    update_timeout(&timeout, start, end);
+                    printf("Novo timeout: %ld.%06ld segundos\n", timeout.tv_sec, timeout.tv_usec);
+                    setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)); // atualizo o timeout
+                }
+            }
+            // Enviar pacote FIN
+            create_packet_FIN(&packet, SUCCESS);
+            sent = sendto(socket_fd, &packet, sizeof(packet), 0, (struct sockaddr*)&client_addr, (socklen_t)addr_len);
+            while(packet.flags != FIN_ACK) {
+                printf("Esperando o pacote do tipo: FIN_ACK do Cliente . . .\n");
+                bytes_received = recvfrom(socket_fd, &packet, sizeof(packet), 0, (struct sockaddr*)&client_addr, (socklen_t*)&addr_len);
+                if (bytes_received < 0) {
+                    perror("recvfrom failed aqui\n");
+                }
+            }
+            fclose(file);
+            printf("Recebido o pacote do tipo: ");
+            print_type_packet(&packet);
+            printf("\n");
+            printf("foi enviado %u bytes\n", tamanho_bytes_totais_enviado);
         }
     }
     close(socket_fd);
@@ -106,32 +194,3 @@ bool file_exists(char* file_name) {
         return false;
     }
 }
-
-        // Esperar receber eternamente um pacote SYN
-
-        /*socklen_t bytes_received = recvfrom(socket_fd, buffer, BUFFER_SIZE - 1, 0,
-                                        (struct sockaddr*)&client_addr, &addr_len);
-        if (bytes_received < 0) {
-            perror("recvfrom failed");
-            close(socket_fd);
-            exit(EXIT_FAILURE);
-        }
-
-        buffer[bytes_received] = '\0'; // Null-terminar a string
-        printf("Recebido do cliente: %s\n", buffer);
-        addr_len = sizeof(client_addr);
-        bytes_received = recvfrom(socket_fd, &packet, sizeof(packet), 0,(struct sockaddr*)&client_addr, &addr_len);
-        if (packet.flags == SYN) {
-            printf("Recebido pacote SYN: %s\n", packet.data);
-        }
-        create_packet_SYN_ACK(&packet, IP_SERVER, PORT, 1);
-        addr_len = sizeof(client_addr);
-        ssize_t sent = sendto(socket_fd, &packet, sizeof(packet), 0, (struct sockaddr*)&client_addr, addr_len);
-        printf("\nEnviado o pacote SYN_ACK\n");
-        if (sent < 0) {
-            perror("Erro ao enviar resposta");
-        }
-        getNetworkInfo(packet.data, ip_msg, &port_msg, file_name);
-        printf("\n\nIP: %s\n", ip_msg);
-        printf("PORT: %d\n", port_msg);
-        printf("FILE: %s\n", file_name);*/

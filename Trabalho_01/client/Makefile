@@ -1,7 +1,7 @@
 COMPILER    = gcc
-FLAGS      	= -Wall -Iinclude
-SRC			= ./src/packet.c ./src/main.c
-OBJ			= ./obj/packet.o ./obj/main.o
+FLAGS      	= -Wall -std=c17 -Iinclude -O2
+SRC			= ./src/utils.c ./src/packet.c ./src/main.c
+OBJ			= ./obj/utils.c ./obj/packet.o ./obj/main.o
 TARGET      = main
 
 DIRS        = bin obj src include
@@ -20,6 +20,7 @@ create_dirs:
 
 
 object_files_create:
+	gcc $(FLAGS) -c src/utils.c -o obj/utils.o
 	gcc $(FLAGS) -c src/packet.c -o obj/packet.o
 	gcc $(FLAGS) -c src/main.c -o obj/main.o
 
@@ -28,7 +29,7 @@ object_files_create:
 
 
 $(TARGET): create_dirs object_files_create
-	$(COMPILER) ./obj/main.o ./obj/packet.o -o $(TARGET)
+	$(COMPILER) ./obj/main.o ./obj/packet.o ./obj/utils.o -o $(TARGET)
 	mv $(TARGET) ./bin/
 
 run:

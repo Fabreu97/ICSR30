@@ -3,27 +3,25 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <sys/time.h>
 
 #include "packet.h"
+#include "utils.h"
 
 #define SERVER_IP "127.0.0.1"
 #define SERVER_PORT 12345
 #define PORT_CLIENT 12345
 
 #define MAX_ATTEMPTS 3
-#define INITIAL_TIMEOUT_SEC 1 // 1 second
-#define ALPHA 0.125
-
 
 
 int input_ip_and_port_file(char* ip, int* port, char* file_name) {
     char input[100];
     char trash;
+    char* endptr;
     printf("\n******************************\n");
     printf("Digite o endereço IP do servidor: ");
-    fgets(input, 100, stdin);
-    if (strlen(input) <= 16) {
+    endptr = fgets(input, 100, stdin);
+    if (strlen(input) <= 16 && endptr != NULL) {
         input[strlen(input) - 1] = '\0';
         strcpy(ip, input);
     } else {
@@ -35,21 +33,13 @@ int input_ip_and_port_file(char* ip, int* port, char* file_name) {
         return 1;
     }
     printf("\nDigite o Arquivo para Download: ");
-    fgets(file_name, 100, stdin);
+    endptr = fgets(file_name, 100, stdin);
+    if (endptr == NULL) {
+        return 1; // Erro: Leitura do arquivo falhou
+    }
     file_name[strlen(file_name) - 1] = '\0'; // Remove o '\n' do final
 
     return 0;
-}
-
-// RTT: Round Trip Time = mede o tempo total entre o envio de um pacote até o recebimento da resposta.
-void update_timeout(struct timeval* timeout, struct timeval start, struct timeval end) {
-    if (end.tv_usec < start.tv_usec) {
-        // "empresta" 1 segundo (1.000.000 microssegundos)
-        end.tv_sec -= 1;
-        end.tv_usec += 1000000;
-    }
-    timeout->tv_sec = (long)((end.tv_sec - start.tv_sec) * ALPHA + timeout->tv_sec * (1 - ALPHA));
-    timeout->tv_usec = (long)((end.tv_usec - start.tv_usec) * ALPHA) + (long)(timeout->tv_usec * (float)(1 - ALPHA));
 }
 
 int main() {
@@ -63,10 +53,12 @@ int main() {
     struct timeval timeout, start, end;
     timeout.tv_sec = 1;
     timeout.tv_usec = 0;
+    int ack_client = 0;
 
     // configuração do socket
     int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
     struct sockaddr_in server_addr;
+    socklen_t addr_len = sizeof(server_addr);
 
     while(1) {
         erro = 1;
@@ -77,24 +69,25 @@ int main() {
         server_addr.sin_family = AF_INET; // IPv4
         server_addr.sin_port = htons(port);
         server_addr.sin_addr.s_addr = INADDR_ANY;
-        if (!inet_aton(ip, &server_addr.sin_addr)) {
+        if (inet_pton(AF_INET, ip, &server_addr.sin_addr) != 1) {
             printf("Erro ao converter o endereço IP.\n");
             erro = 1;
         }
         if(!erro) {
             // Enviar SYN
             attempts = 0;
-            Packet packet;
-            create_packet_SYN(&packet, ip, port, file_name);
+            Packet recv_packet;
+            Packet send_packet;
+            create_packet_SYN(&send_packet, ip, port, file_name);
             setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-            while(attempts < MAX_ATTEMPTS && packet.flags != SYN_ACK) {
+            while(attempts < MAX_ATTEMPTS && recv_packet.flags != SYN_ACK) {
                 bytes_received = -1;
                 gettimeofday(&start, NULL);
-                sent = sendto(socket_fd, &packet, sizeof(packet), 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
-                printf("Mensagem SYN enviada para o servidor: %s\n", packet.data);
+                sent = sendto(socket_fd, &send_packet, sizeof(send_packet), 0, (struct sockaddr*)&server_addr, (socklen_t)addr_len);
+                printf("Mensagem SYN enviada para o servidor: %s\n", send_packet.data);
                 printf("Enviado o pacote do tipo: ");
-                print_type_packet(&packet);
-                bytes_received = recvfrom(socket_fd, &packet, sizeof(packet), 0, NULL, NULL);
+                print_type_packet(&send_packet);
+                bytes_received = recvfrom(socket_fd, &recv_packet, sizeof(recv_packet), 0, NULL, NULL);
                 gettimeofday(&end, NULL);
                 if (bytes_received < 0) {
                     printf("Timeout! Tentativa %d de %d\n", attempts + 1, MAX_ATTEMPTS);
@@ -103,61 +96,83 @@ int main() {
                     //printf("Novo timeout: %ld.%06ld segundos\n", timeout.tv_sec, timeout.tv_usec);
                 } else {
                     printf("Recebido o pacote do tipo: ");
-                    print_type_packet(&packet);
+                    print_type_packet(&recv_packet);
                     // Verifico se SYN_ACK aceito a solicitação do arquivo
                     update_timeout(&timeout, start, end);
                     printf("Novo timeout: %ld.%06ld segundos\n", timeout.tv_sec, timeout.tv_usec);
                     setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)); // atualizo o timeout
-                    if (packet.flags == SYN_ACK && (packet.data[0]) != 0) {
-                        erro = 1;
+                    if (recv_packet.flags == SYN_ACK && (recv_packet.data[0]) != 0) {
+                        erro = 0;
                         printf(" o pacote SYN_ACK retorno com SUCESSO.\n");
                     } else {
+                        erro = 1;
+                        break;
                         printf(" o pacote SYN_ACK retorno com ERRO.\n");
+                        printf("Arquivo não existe, tente novamente.\n");
                     }
                 }
             }
+            if(!erro) {
+                // Envia ACK e recebe SND
+                ack_client = 0;
+                bool release = true;
+                FILE* file = fopen(file_name, "wb");
+                while(recv_packet.flags != FIN) {
+                    // Enviar ACK
+                    create_packet_ACK(&send_packet, ack_client);
+                    if (release) {
+                        gettimeofday(&start, NULL);
+                    }
+                    sent = sendto(socket_fd, &send_packet, sizeof(send_packet), 0, (struct sockaddr*)&server_addr, (socklen_t)addr_len);
+                    if (sent < 0) {
+                        perror("Erro ao enviar pacote ACK\n");
+                        //fclose(file);
+                        //close(socket_fd);
+                        //exit(EXIT_FAILURE);
+                    }
+                    printf("Enviado o pacote do tipo: ");
+                    print_type_packet(&send_packet);
+                    printf("ACK = %d\n", send_packet.ack);
+                    bytes_received = recvfrom(socket_fd, &recv_packet, sizeof(recv_packet), 0, NULL, NULL);
+                    if (bytes_received < 0) {
+                        release = false;
+                        //timeout.tv_usec += 10000; // Aumenta o timeout em 10ms 
+                        //printf("Novo timeout: %ld.%06ld segundos\n", timeout.tv_sec, timeout.tv_usec);
+                    } else {
+                        release = true;
+                        gettimeofday(&end, NULL);
+                        update_timeout(&timeout, start, end);
+                        printf("Novo timeout: %ld.%06ld segundos\n", timeout.tv_sec, timeout.tv_usec);
+                        setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)); // atualizo o timeout
+                        printf("Recebido o pacote do tipo: ");
+                        print_type_packet(&recv_packet);
+                        if(recv_packet.seq_number == ack_client) {
+                            ack_client++;
+                            if (recv_packet.flags == SND && recv_packet.length > 0) { 
+                                printf("SEQ_NUMBER(%d): %d\n", recv_packet.length, recv_packet.seq_number);
+                                printf("ACK = %d\n", recv_packet.ack);
+                                // Escreve no arquivo
+                                if (file == NULL) {
+                                    perror("Erro ao abrir o arquivo para escrita");
+                                    exit(EXIT_FAILURE);
+                                }
+                                fwrite(recv_packet.data, 1, recv_packet.length, file);
+                                //fclose(file);
+                            }
+                        } else {
+                            printf("Pacote recebido fora de ordem. Esperando o pacote do tipo: SND do Servidor . . .\n");
+                            print_packet(&recv_packet);
+                        }
+                    }
+                }
+                fclose(file);
+                create_packet_FIN_ACK(&send_packet);
+                printf("Enviado o pacote do tipo: ");
+                print_type_packet(&send_packet);
+                sent = sendto(socket_fd, &send_packet, sizeof(send_packet), 0, (struct sockaddr*)&server_addr, (socklen_t)addr_len);
+            }
         }
-            /*
-            Packet packet;
-            create_packet_SYN(&packet, ip, PORT_CLIENT, "arquivo.txt");
-            ssize_t sent = sendto(socket_fd, message, strlen(message), 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
-            printf("Mensagem enviada para o servidor: %s\n", message);
-            sent = sendto(socket_fd, &packet, sizeof(packet), 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
-            printf("Enviado pacote SYN: %s\n", packet.data);
-            ssize_t bytes_received = recvfrom(socket_fd, &packet, sizeof(packet), 0,NULL, NULL);
-            printf("Recebido pacote SYN_ACK: %s\n", packet.data);
-            */
     }
     close(socket_fd);
     return 0;
 }
-/*
-    // Criar socket UDP
-    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        perror("socket failed");
-        exit(EXIT_FAILURE);
-    }
-
-    // Configurar endereço do servidor
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sin_family = AF_INET; // IPv4
-    server_addr.sin_port = htons(SERVER_PORT);
-    if (inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr) <= 0) {
-        perror("inet_pton failed");
-        close(sockfd);
-        exit(EXIT_FAILURE);
-    }
-
-    // Enviar mensagem
-    ssize_t sent = sendto(sockfd, message, strlen(message), 0,
-                          (struct sockaddr*)&server_addr, sizeof(server_addr));
-    if (sent < 0) {
-        perror("sendto failed");
-        close(sockfd);
-        exit(EXIT_FAILURE);
-    }
-
-    printf("Mensagem enviada para o servidor: %s\n", message);
-
-    close(sockfd);
-    */

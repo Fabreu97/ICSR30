@@ -1,6 +1,7 @@
 COMPILER    = gcc
-CFLAGS      = -Wall -Iinclude
-
+FLAGS      	= -Wall -Iinclude -std=c17
+SRC			= ./src/utils.c ./src/packet.c ./src/main.c
+OBJ			= ./obj/utils.c ./obj/packet.o ./obj/main.o
 TARGET      = main
 
 DIRS        = bin obj src include
@@ -14,15 +15,21 @@ create_dirs:
 	-cp ../utils/*.c ./src/
 	-mv *.c ./src/
 	-mv *.h ./include/
-	-rm -f ./bin/*
 	@echo "Diretórios criados com sucesso!"
 
+
+
 object_files_create:
-	gcc $(CFLAGS) -c src/packet.c -o obj/packet.o
-	gcc $(CFLAGS) -c src/main.c -o obj/main.o
+	gcc $(FLAGS) -c src/utils.c -o obj/utils.o
+	gcc $(FLAGS) -c src/packet.c -o obj/packet.o
+	gcc $(FLAGS) -c src/main.c -o obj/main.o
+
+%.o: %.c
+	$(COMPILER) $(FLAGS) -c $< -o $@
+
 
 $(TARGET): create_dirs object_files_create
-	$(COMPILER) ./obj/main.o ./obj/packet.o -o $(TARGET)
+	$(COMPILER) ./obj/main.o ./obj/packet.o ./obj/utils.o -o $(TARGET)
 	mv $(TARGET) ./bin/
 
 run:
