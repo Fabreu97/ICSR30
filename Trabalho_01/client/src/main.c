@@ -114,6 +114,9 @@ int main() {
                     }
                 }
             }
+            if(attempts == MAX_ATTEMPTS) {
+                erro = 1;
+            }
             if(!erro) {
                 tamanho_bytes_totais_recebidos = 0;
                 // Envia ACK e recebe SND
