@@ -43,6 +43,8 @@ int input_ip_and_port_file(char* ip, int* port, char* file_name) {
 }
 
 int main() {
+    bool pausar_uma_vez = true;
+    unsigned int tamanho_bytes_totais_recebidos = 0;
     int erro;
     char ip[16];
     int port;
@@ -113,6 +115,7 @@ int main() {
                 }
             }
             if(!erro) {
+                tamanho_bytes_totais_recebidos = 0;
                 // Envia ACK e recebe SND
                 ack_client = 0;
                 bool release = true;
@@ -146,6 +149,10 @@ int main() {
                         setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)); // atualizo o timeout
                         printf("Recebido o pacote do tipo: ");
                         print_type_packet(&recv_packet);
+                        if(recv_packet.seq_number == 10 && pausar_uma_vez) {
+                            system("pause");
+                            pausar_uma_vez = false;
+                        }
                         if(recv_packet.seq_number == ack_client) {
                             ack_client++;
                             if (recv_packet.flags == SND && recv_packet.length > 0) { 
@@ -156,6 +163,7 @@ int main() {
                                     perror("Erro ao abrir o arquivo para escrita");
                                     exit(EXIT_FAILURE);
                                 }
+                                tamanho_bytes_totais_recebidos += recv_packet.length;
                                 fwrite(recv_packet.data, 1, recv_packet.length, file);
                                 //fclose(file);
                             }
@@ -170,6 +178,7 @@ int main() {
                 printf("Enviado o pacote do tipo: ");
                 print_type_packet(&send_packet);
                 sent = sendto(socket_fd, &send_packet, sizeof(send_packet), 0, (struct sockaddr*)&server_addr, (socklen_t)addr_len);
+                printf("Foi recebido: %u bytes\n", tamanho_bytes_totais_recebidos);
             }
         }
     }

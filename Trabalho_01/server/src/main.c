@@ -131,7 +131,6 @@ int main() {
                 //Identifico a requisição de pacote do cliente
                 ack_client = packet.ack;
                 //Faço a montagem do pacote
-                long file_size = ftell(file);
                 fseek(file, ack_client*LENGTH, SEEK_SET);
                 bytes_read = fread(buffer, sizeof(char), LENGTH, file);
                 // Enviar pacote SND
