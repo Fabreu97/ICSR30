@@ -169,7 +169,7 @@ int main() {
                             }
                         } else {
                             printf("Pacote recebido fora de ordem. Esperando o pacote do tipo: SND do Servidor . . .\n");
-                            print_packet(&recv_packet);
+                            //print_packet(&recv_packet);
                         }
                     }
                 }
