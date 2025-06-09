@@ -7,12 +7,7 @@
 #include "packet.h"
 #include "utils.h"
 
-#define SERVER_IP "127.0.0.1"
-#define SERVER_PORT 12345
-#define PORT_CLIENT 12345
-
 #define MAX_ATTEMPTS 3
-
 
 int input_ip_and_port_file(char* ip, int* port, char* file_name) {
     char input[100];
@@ -153,7 +148,7 @@ int main() {
                         printf("Recebido o pacote do tipo: ");
                         print_type_packet(&recv_packet);
                         if(recv_packet.seq_number == 10 && pausar_uma_vez) {
-                            system("pause");
+                            getchar(); // utilizando para pausar no pacote 10
                             pausar_uma_vez = false;
                         }
                         if(recv_packet.seq_number == ack_client) {
