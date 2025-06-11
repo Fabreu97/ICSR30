@@ -26,7 +26,7 @@
  * DEFINES 
  *****************************************************************************/
 
-#define REQ     0 // Requisição de recurso GET or MSG
+#define REQ     0 
 #define ACK     1 
 #define IDN     2
 #define FIN     3

@@ -7,6 +7,9 @@ void update_timeout(struct timeval* timeout, struct timeval start, struct timeva
         end.tv_sec -= 1;
         end.tv_usec += 1000000;
     }
-    timeout->tv_sec = (long)((end.tv_sec - start.tv_sec) * ALPHA + timeout->tv_sec * (1 - ALPHA));
-    timeout->tv_usec = (long)((end.tv_usec - start.tv_usec) * ALPHA) + (long)(timeout->tv_usec * (float)(1 - ALPHA));
+    timeout->tv_sec = ((end.tv_sec - start.tv_sec) * ALPHA + timeout->tv_sec * (1 - ALPHA));
+    timeout->tv_usec = ((end.tv_usec - start.tv_usec) * ALPHA) + (timeout->tv_usec * (float)(1 - ALPHA));
+    if(timeout->tv_usec < 999990) {
+        timeout->tv_usec += 40;
+    }
 }

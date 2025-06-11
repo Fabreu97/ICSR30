@@ -7,8 +7,3 @@ void fillPacket(Packet* packet, unsigned int number, byte flag, unsigned short i
     packet->length = length;
     strcpy(packet->payload, payload);
 }
-
-void printHeader(Packet* packet) {
-    
-
-}

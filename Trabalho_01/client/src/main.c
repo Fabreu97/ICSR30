@@ -38,7 +38,7 @@ int input_ip_and_port_file(char* ip, int* port, char* file_name) {
 }
 
 int main() {
-    bool pausar_uma_vez = true;
+    bool pausar_uma_vez = false;
     unsigned int tamanho_bytes_totais_recebidos = 0;
     int erro;
     char ip[16];

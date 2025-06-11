@@ -16,6 +16,7 @@
 bool file_exists(char* file_name);
 
 int main() {
+    int count_time_out = 0;
     unsigned int tamanho_bytes_totais_enviado = 0;
     int socket_fd;
     struct sockaddr_in server_addr, client_addr;
@@ -157,6 +158,7 @@ int main() {
                 }
                 bytes_received = recvfrom(socket_fd, &packet, sizeof(packet), 0, (struct sockaddr*)&client_addr, (socklen_t*)&addr_len);
                 if (bytes_received < 0) {
+                    count_time_out++;
                     release = false;
                     perror("Timeout de espera por mensagem. ACK\n");
                 } else {
@@ -182,6 +184,7 @@ int main() {
             print_type_packet(&packet);
             printf("\n");
             printf("foi enviado %u bytes\n", tamanho_bytes_totais_enviado);
+            printf("Time out: %d\n", count_time_out);
         }
     }
     close(socket_fd);

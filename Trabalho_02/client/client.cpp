@@ -50,11 +50,14 @@ void Client::run() {
     while(true) {
         std::cout << "*************************************" << std::endl;
         std::cout << "Comando Get:  GET/nome_do_arquivo.ext" << std::endl;
-        std::cout << "Comando msg:  MSG:mensagem!" << std::endl;
+        std::cout << "Comando msg:  MSG/mensagem!" << std::endl;
         std::cout << "\tA mensagem será enviada para todos " << std::endl << "\tos clientes do server!" << std::endl;
         std::cout << "Comando exit: EXIT!" << std::endl;
         std::cout << "*************************************" << std::endl;
         std::getline(std::cin, input);
+        
+        
+
     }
 
 }
