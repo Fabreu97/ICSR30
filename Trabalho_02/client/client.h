@@ -1,6 +1,6 @@
 /***********************************************************
  * Author:  Fernando P. G. de Abreu
- * Date:    08/06/2025
+ * Date:    12/06/2025
  ***********************************************************
  * 
  * Arquivo que define o compartamento do Cliente
@@ -16,17 +16,22 @@
 ***********************************************************/
 
 #include <iostream>
+#include <iomanip>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string>
 #include <arpa/inet.h>
+#include <sys/time.h>
 #include "../utils/packet.h"
+#include "../utils/utils.h"
 
 /***********************************************************
 * DEFINES
 ***********************************************************/
+
+#define MAX_ATEMPTS 3
 
 class Client {
 private:
@@ -42,6 +47,9 @@ public:
 
     void updateAddrServer(const std::string ipv4, const int port);
     const bool connectToServer();
+    const bool requestGET(const std::string payload);
+    const bool requestIDT(const std::string payload);
+    void requestMSG(const std::string payload);
     void run();
 };
 

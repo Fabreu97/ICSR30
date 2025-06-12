@@ -19,19 +19,22 @@
 /*****************************************************************************
  * INCLUDED
  *****************************************************************************/
-
+#include <iostream>
 #include <string.h>
-
+#include <string>
 /*****************************************************************************
  * DEFINES 
  *****************************************************************************/
 
-#define REQ     0 
-#define ACK     1 
-#define IDN     2
-#define FIN     3
-#define FIN_ACK 4
-#define LENGTH  1017
+#define REQ         0 
+#define DATA        1 
+#define MSG         2
+#define ACK         3
+#define FIN_DATA    4
+#define FIN         5
+#define FIN_ACK     6
+
+#define LENGTH      1017
 
 using byte = char;
 
@@ -43,6 +46,7 @@ typedef struct {
 }Packet;
 
 void fillPacket(Packet* packet, unsigned int number, byte flag, unsigned short int length, byte payload[LENGTH]);
+void fillPacket(Packet* packet, unsigned int number, byte flag, unsigned short int length, std::string payload);
 // TODO void printHeader(Packet* packet);
 
 #endif // __INCLUDED_PACKET_H__
