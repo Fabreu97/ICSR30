@@ -128,16 +128,6 @@ const bool Client::requestGET(const std::string payload) {
     }
     return true;
 }
-const bool Client::requestIDT(const std::string payload) { return false; }
-
-void Client::requestMSG(const std::string payload) {
-    ssize_t bytes_send, bytes_recv;
-    Packet received_p, shipping_p;
-    fillPacket(&shipping_p, 0, REQ, sizeof(payload.c_str()), payload);
-    bytes_send = send(this->socket_fd, &shipping_p, sizeof(Packet), 0);
-    bytes_recv = recv(this->socket_fd, &received_p, sizeof(Packet), 0);
-    // ssize_t recv(int sockfd, void *buf, size_t len, int flags);
-}
 
 void Client::handleIncomingData() {
     Packet receiving_p, shipping_p;
@@ -154,6 +144,7 @@ void Client::handleIncomingData() {
                     if(receiving_p.number == this->ack_client) {
                         if(receiving_p.number == 0) {
                             if(file_write != NULL) {
+                                this->ack_client = 0;
                                 fclose(file_write); 
                             }
                             file_write = fopen(this->file_name.c_str(), "wb");
@@ -179,7 +170,7 @@ void Client::handleIncomingData() {
                     }
                     break;
                 case MSG:
-                    std::cout << receiving_p.payload << std::endl;
+                    std::cout << std::endl << receiving_p.payload << std::endl;
                     fillPacket(&shipping_p, 0, ACK, strlen("Success\0"), (byte*)"Success\0");
                     break;
                 case FIN:
@@ -190,7 +181,7 @@ void Client::handleIncomingData() {
                     break;
             }
         }
-        if(receiving_p.flag != ACK && receiving_p.flag != FIN_DATA) {
+        if(receiving_p.flag == DATA) {
             bytes_send = send(this->socket_fd, (Packet*)&shipping_p, sizeof(Packet), 0);
         }
     }
@@ -205,23 +196,24 @@ void Client::run() {
     std::string input, command;
     std::thread thread(&Client::handleIncomingData, this);
     thread.detach();
+    std::cout << "*************************************" << std::endl;
+    std::cout << "Comando Get:  GET/nome_do_arquivo.ext" << std::endl;
+    std::cout << "Comando MSG:  MSG/mensagem!" << std::endl;
+    std::cout << "\tA mensagem será enviada para todos " << std::endl; 
+    std::cout << "\tos clientes do server!" << std::endl;
+    std::cout << "Comando IDT:  IDT/nome_de_usuario    " << std::endl;
+    std::cout << "Comando exit: EXIT!" << std::endl;
+    std::cout << "*************************************" << std::endl;
     while(true) {
-        std::cout << "*************************************" << std::endl;
-        std::cout << "Comando Get:  GET/nome_do_arquivo.ext" << std::endl;
-        std::cout << "Comando MSG:  MSG/mensagem!" << std::endl;
-        std::cout << "\tA mensagem será enviada para todos " << std::endl; 
-        std::cout << "\tos clientes do server!" << std::endl;
-        std::cout << "Comando IDT:  IDT/nome_de_usuario    " << std::endl;
-        std::cout << "Comando exit: EXIT!" << std::endl;
-        std::cout << "*************************************" << std::endl;
-        std::cout << "Digite um comando: ";
         std::getline(std::cin, input);
-        
         if(input.length() > 4) {
             command = input.substr(0,4);
             if(command == "GET/" || command == "MSG/" || command == "IDT/") {
                 //envio a requisição
-                fillPacket(&shipping_p, 0, REQ, command.length(), command);
+                if(command == "GET/") {
+                    this->file_name = input.substr(4);
+                }
+                fillPacket(&shipping_p, 0, REQ, input.length(), input);
                 bytes_send = send(this->socket_fd, (Packet*)&shipping_p, sizeof(Packet), 0);
             }
         }

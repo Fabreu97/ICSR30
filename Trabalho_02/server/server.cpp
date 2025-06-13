@@ -67,7 +67,6 @@ void Server::run() {
             perror("Conexão com cliente não aceita!\n");
             continue;
         }
-        
         ClientData client;
         client.fd = client_fd;
         client.addr = client_addr;
@@ -77,6 +76,7 @@ void Server::run() {
 
         /*Adiciona o endereço do cliente no vector*/
         this->client_datas.push_back(client);
+        std::cout << "Usuarios onlines: " << client_datas.size() << std::endl;
         std::thread thread(&Server::client_service, this, client);
         thread.detach();
     }
@@ -96,6 +96,8 @@ void Server::client_service(struct ClientData client) {
 
         if(bytes_recv < 0) {
             std::cerr << "Error" << std::endl;
+        } else if(bytes_recv == 0) {
+            break;
         } else {
             // servidor irá processar o pacote
             switch(received_p.flag) {
@@ -161,13 +163,13 @@ void Server::client_service(struct ClientData client) {
                     }
                     break;
                 default:
-
                     break;
             }
-            if(shipping_p.flag == ACK && shipping_p.flag == DATA && shipping_p.flag == MSG) {
+            if(shipping_p.flag == ACK || shipping_p.flag == DATA || shipping_p.flag == MSG) {
                 bytes_send = send(client.fd, (Packet*)&shipping_p, sizeof(Packet), 0);
             }
         }
     }while(received_p.flag != FIN && received_p.flag != FIN_ACK);
-
+    client_datas.erase(std::remove(client_datas.begin(), client_datas.end(), client), client_datas.end());
+    close(client.fd);
 }

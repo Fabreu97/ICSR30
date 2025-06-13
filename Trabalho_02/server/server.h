@@ -17,6 +17,7 @@
 
 #include <iostream>
 #include <stdlib.h>
+#include <algorithm>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
