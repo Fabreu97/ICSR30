@@ -18,7 +18,8 @@
 #include <vector>
 #include <iomanip>
 #include <sstream>
-#include <openssl/sha.h>
+#include <openssl/evp.h>
+#include <unistd.h>
 
 /*****************************************************************************
  * MACROS 
@@ -32,6 +33,7 @@
  *****************************************************************************/
 
 void update_timeout(struct timeval* timeout, struct timeval start, struct timeval end);
+bool file_exists(char* file_name);
 std::string sha256_to_hex(const unsigned char* hash, unsigned int hash_len);
 std::string get_file_sha256(const std::string& filePath);
  #endif // __INCLUDED_UTILS_H__

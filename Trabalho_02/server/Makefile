@@ -1,13 +1,18 @@
-COMPILER = g++
-FLAGS = -Wall
-SRCS = server.cpp main.cpp
+##################################
+############ MAKEFILE ############
+##################################
+
+LIBS = -lssl -lcrypto
 
 all:
-	g++ $(FLAGS) -c server.cpp -o server.o
-	g++ $(FLAGS) -c main.cpp -o main.o
-	g++ server.o main.o -o main
-	./main || rm -rf *.o main
+	g++ -c ../utils/utils.cpp -o ../utils/utils.o
+	g++ -c ../utils/packet.cpp -o ../utils/packet.o
+	g++ -c server.cpp -o server.o
+	g++ -c main.cpp -o main.o
+	g++ ../utils/packet.o ../utils/utils.o server.o main.o -o main $(LIBS)
 
+run:
+	./main
 
 clean:
-	rm -rf *.o main
+	rm -rf *.o main ../utils/*.o

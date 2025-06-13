@@ -1,5 +1,5 @@
 #include "utils.h"
-#include <openssl/evp.h>
+
 // RTT: Round Trip Time = mede o tempo total entre o envio de um pacote até o recebimento da resposta.
 void update_timeout(struct timeval* timeout, struct timeval start, struct timeval end) {
     if (end.tv_usec < start.tv_usec) {
@@ -9,6 +9,19 @@ void update_timeout(struct timeval* timeout, struct timeval start, struct timeva
     }
     timeout->tv_sec = ((end.tv_sec - start.tv_sec) * ALPHA + timeout->tv_sec * (1 - ALPHA));
     timeout->tv_usec = ((end.tv_usec - start.tv_usec) * ALPHA) + (timeout->tv_usec * (float)(1 - ALPHA));
+}
+
+bool file_exists(char* file_name) {
+    char caminho[1024];
+    snprintf(caminho, sizeof(caminho), "shared_files/%s", file_name);
+    // Verifique o arquivo
+    if (access(caminho, F_OK) != -1) {
+        printf("Arquivo encontrado!\n");
+        return true;
+    } else {
+        perror("Erro ao acessar o arquivo");
+        return false;
+    }
 }
 
 // hash_len é necessário para saber quantos bytes converter
@@ -64,5 +77,5 @@ std::string get_file_sha256(const std::string& filePath) {
     }
 
     EVP_MD_CTX_free(mdctx);
-    return sha256_to_hex(hash, hash_len);  // ✅ chamada corrigida
+    return sha256_to_hex(hash, hash_len);
 }

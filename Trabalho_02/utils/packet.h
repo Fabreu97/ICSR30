@@ -47,6 +47,7 @@ typedef struct {
 
 void fillPacket(Packet* packet, unsigned int number, byte flag, unsigned short int length, byte payload[LENGTH]);
 void fillPacket(Packet* packet, unsigned int number, byte flag, unsigned short int length, std::string payload);
+void printPacket(Packet* packet);
 // TODO void printHeader(Packet* packet);
 
 #endif // __INCLUDED_PACKET_H__
