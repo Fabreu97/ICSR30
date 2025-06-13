@@ -1,7 +1,10 @@
 #include "client.h"
 
+std::atomic<bool> running{true};
+std::mutex mutex;
+
 Client::Client(const std::string ipv4, const int port):
-    ipv4_server(ipv4), port(port)
+    ipv4_server(ipv4), ack_client(0), port(port)
 {
     this->socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if(this->socket_fd < 0) {
@@ -136,10 +139,73 @@ void Client::requestMSG(const std::string payload) {
     // ssize_t recv(int sockfd, void *buf, size_t len, int flags);
 }
 
-void Client::run() {
-    std::string input, command;
-    while(true) {
+void Client::handleIncomingData() {
+    Packet receiving_p, shipping_p;
+    ssize_t bytes_recv, bytes_send;
+    FILE* file_write = NULL;
+    while(running) {
+        bytes_recv = recv(this->socket_fd, (Packet*)&receiving_p, sizeof(Packet), 0);
+        if(bytes_recv < 0) {
+            std::lock_guard<std::mutex> lock(mutex);
+            std::cerr << "===========TIMEOUT===========" << std::endl;
+        } else {
+            switch(receiving_p.flag) {
+                case DATA:
+                    if(receiving_p.number == this->ack_client) {
+                        if(receiving_p.number == 0) {
+                            if(file_write != NULL) {
+                                fclose(file_write); 
+                            }
+                            file_write = fopen(this->file_name.c_str(), "wb");
+                        }
+                        fwrite(receiving_p.payload, 1, receiving_p.length, file_write);
+                        ack_client += receiving_p.length;
+                        fillPacket(&shipping_p, ack_client, ACK, 0, (byte*)"\0");
+                    }
+                    break;
+                case ACK:
+                    ack_client = 0;
+                    //não envio pacotes resposta
+                    std::cout << "SERVER SEND ACK: " << receiving_p.payload << std::endl;
+                    receiving_p.flag = FIN;
+                    break;
+                case FIN_DATA:
+                    this->ack_client = 0;
+                    //não envio pacotes resposta
+                    if (receiving_p.payload == get_file_sha256(file_name)) {
+                        std::cout << "Arquivo Verificado com HASH SHA-256." << std::endl;
+                    } else {
+                        std::cout << "Falha na verificação SHA-256." << std::endl;
+                    }
+                    break;
+                case MSG:
+                    std::cout << receiving_p.payload << std::endl;
+                    fillPacket(&shipping_p, 0, ACK, strlen("Success\0"), (byte*)"Success\0");
+                    break;
+                case FIN:
+                    
+                    break;
+                default:
+                    std::cout << "Pacote Desconhecido!" << std::endl;
+                    break;
+            }
+        }
+        if(receiving_p.flag != ACK && receiving_p.flag != FIN_DATA) {
+            bytes_send = send(this->socket_fd, (Packet*)&shipping_p, sizeof(Packet), 0);
+        }
+    }
+    if(file_write != NULL) {
+        fclose(file_write);
+    }
+}
 
+void Client::run() {
+    Packet shipping_p;
+    ssize_t bytes_send;
+    std::string input, command;
+    std::thread thread(&Client::handleIncomingData, this);
+    thread.detach();
+    while(true) {
         std::cout << "*************************************" << std::endl;
         std::cout << "Comando Get:  GET/nome_do_arquivo.ext" << std::endl;
         std::cout << "Comando MSG:  MSG/mensagem!" << std::endl;
@@ -148,20 +214,16 @@ void Client::run() {
         std::cout << "Comando IDT:  IDT/nome_de_usuario    " << std::endl;
         std::cout << "Comando exit: EXIT!" << std::endl;
         std::cout << "*************************************" << std::endl;
+        std::cout << "Digite um comando: ";
         std::getline(std::cin, input);
         
         if(input.length() > 4) {
             command = input.substr(0,4);
-            if(command == "GET/") {
-                if(this->requestGET(input)) {
-                    std::cout << "Arquivo recebido com sucesso!\n";
-                }
-            } else if(command == "MSG/") {
-                requestMSG(input);
-            } else if(command == "IDT/") {
-                requestIDT(input);
+            if(command == "GET/" || command == "MSG/" || command == "IDT/") {
+                //envio a requisição
+                fillPacket(&shipping_p, 0, REQ, command.length(), command);
+                bytes_send = send(this->socket_fd, (Packet*)&shipping_p, sizeof(Packet), 0);
             }
-
         }
     }
 

@@ -15,15 +15,25 @@
 * INCLUDED
 ***********************************************************/
 
+// Standard
 #include <iostream>
 #include <iomanip>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string>
+
+// Socket
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <string>
 #include <arpa/inet.h>
 #include <sys/time.h>
+
+// Threads
+#include <thread>
+#include <mutex>
+#include <atomic>
+
+// SHA-256 and Packets
 #include "../utils/packet.h"
 #include "../utils/utils.h"
 
@@ -40,6 +50,8 @@ private:
     std::string name;
     std::string ipv4_server;
     int port;
+    unsigned ack_client;
+    std::string file_name;
 
 public:
     Client(const std::string ipv4 = "0.0.0.0", const int port = 12345);
@@ -50,6 +62,7 @@ public:
     const bool requestGET(const std::string payload);
     const bool requestIDT(const std::string payload);
     void requestMSG(const std::string payload);
+    void handleIncomingData();
     void run();
 };
 

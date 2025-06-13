@@ -1,7 +1,7 @@
 # Pastas a serem ignoradas
 
 # Ignorar arquivos de configuração do Visual Studio Code
-.vscode
+
 
 # Ignorar arquivos de configuração do Python
 __pycache__/

@@ -100,65 +100,73 @@ void Server::client_service(struct ClientData client) {
             // servidor irá processar o pacote
             switch(received_p.flag) {
                 case REQ:
-                    if (strncmp(received_p.payload, "MSG/", 4) == 0) {
-                        std::string msg = client.name + std::string(": ") + std::string(received_p.payload + 4);
-                        fillPacket(&shipping_p, 0, MSG, msg.length(), msg);
-                        for(it = client_datas.begin(); it != client_datas.end(); ++it) {
-                            if(*it != client) {
-                                bytes_send = send(it->fd, (Packet*)&shipping_p, sizeof(Packet), 0);
+                    if(received_p.payload != nullptr) {
+                        if (strncmp(received_p.payload, "MSG/", 4) == 0) {
+                            std::string msg = client.name + std::string(": ") + std::string(received_p.payload + 4);
+                            fillPacket(&shipping_p, 0, MSG, msg.length(), msg);
+                            for(it = client_datas.begin(); it != client_datas.end(); ++it) {
+                                if(*it != client) {
+                                    bytes_send = send(it->fd, (Packet*)&shipping_p, sizeof(Packet), 0);
+                                }
                             }
+                            fillPacket(&shipping_p, 0, ACK, strlen("Success\0"), (byte*)"Success\0");
+                        } else if(strncmp(received_p.payload, "GET/", 4) == 0) {
+                            path = std::string("./shared_files/") + std::string(received_p.payload + 4);
+                            file_name = std::string(received_p.payload + 4);
+                            if(file_exists(received_p.payload + 4)) {
+                                if (file_read != NULL) {
+                                    fclose(file_read);
+                                    file_read = NULL;
+                                }
+                                file_read = fopen(path.c_str(), "rb");
+                                fseek(file_read, received_p.number, SEEK_SET);
+                                bytes_read = fread(buffer, sizeof(char), LENGTH, file_read);
+
+                                // criando pacote DATA
+                                shipping_p.number = received_p.number;
+                                shipping_p.flag = DATA;
+                                shipping_p.length = bytes_read;
+                                memcpy(shipping_p.payload, buffer, bytes_read);
+                            } else {
+                                // enviar um ACK(FALHA)
+                                fillPacket(&shipping_p, 0, ACK, strlen("Failure\0"), (byte*)"Failure\0");
+                            }
+                        } else if(strncmp(received_p.payload, "IDT/", 4) == 0) {
+                            client.name = std::string(received_p.payload + 4);
+                            fillPacket(&shipping_p, 0, ACK, strlen("Success\0"), (byte*)"Success\0");
                         }
-                        fillPacket(&shipping_p, 0, ACK, strlen("Success\0"), (byte*)"Success\0");
-                    } else if(strncmp(received_p.payload, "GET/", 4) == 0) {
-                        path = std::string("./shared_files/") + std::string(received_p.payload + 4);
-                        file_name = std::string(received_p.payload + 4);
-                        if(file_exists(received_p.payload + 4)) {
-                            if (file_read != NULL) {
-                                fclose(file_read);
-                                file_read = NULL;
-                            }
-                            file_read = fopen(path.c_str(), "rb");
+                    }
+                    break;
+                case ACK:
+                    bytes_read = 0;
+                    if(strcmp(received_p.payload, "Success\0") != 0) { 
+                        if(file_read != NULL) {
                             fseek(file_read, received_p.number, SEEK_SET);
                             bytes_read = fread(buffer, sizeof(char), LENGTH, file_read);
-
-                            // criando pacote DATA
+                        }
+                        // criando pacote DATA
+                        if(bytes_read > 0) {
                             shipping_p.number = received_p.number;
                             shipping_p.flag = DATA;
                             shipping_p.length = bytes_read;
                             memcpy(shipping_p.payload, buffer, bytes_read);
                         } else {
-                            // enviar um ACK(FALHA)
-                            fillPacket(&shipping_p, 0, ACK, strlen("Failure\0"), (byte*)"Failure\0");
-                        }
-                    } else if(strncmp(received_p.payload, "IDT/", 4) == 0) {
-                        client.name = std::string(received_p.payload + 4);
-                        fillPacket(&shipping_p, 0, ACK, strlen("Success\0"), (byte*)"Success\0");
-                    }
-                    break;
-                case ACK:
-                    fseek(file_read, received_p.number, SEEK_SET);
-                    bytes_read = fread(buffer, sizeof(char), LENGTH, file_read);
-                    // criando pacote DATA
-                    if(bytes_read > 0) {
-                        shipping_p.number = received_p.number;
-                        shipping_p.flag = DATA;
-                        shipping_p.length = bytes_read;
-                        memcpy(shipping_p.payload, buffer, bytes_read);
-                    } else {
-                        // FIN_DATA
-                        if(this->map_sha256.find(file_name) == this->map_sha256.end()) {
-                            map_sha256.insert(std::make_pair(file_name, get_file_sha256(path)));
+                            // FIN_DATA
+                            if(this->map_sha256.find(file_name) == this->map_sha256.end()) {
+                                map_sha256.insert(std::make_pair(file_name, get_file_sha256(path)));
+                                fillPacket(&shipping_p, 0, FIN_DATA, 32, this->map_sha256[file_name]);
+                            }
                             fillPacket(&shipping_p, 0, FIN_DATA, 32, this->map_sha256[file_name]);
                         }
-                        fillPacket(&shipping_p, 0, FIN_DATA, 32, this->map_sha256[file_name]);
                     }
                     break;
                 default:
 
                     break;
             }
-
-            bytes_send = send(client.fd, (Packet*)&shipping_p, sizeof(Packet), 0);
+            if(shipping_p.flag == ACK && shipping_p.flag == DATA && shipping_p.flag == MSG) {
+                bytes_send = send(client.fd, (Packet*)&shipping_p, sizeof(Packet), 0);
+            }
         }
     }while(received_p.flag != FIN && received_p.flag != FIN_ACK);
 
