@@ -49,87 +49,8 @@ const bool Client::connectToServer() {
     return true;
 }
 
-const bool Client::requestGET(const std::string payload) {
-    Packet shipping_p, receiving_p;
-    struct timeval timeout, start, end;
-    timeout.tv_sec = INITIAL_TIMEOUT_SEC;
-    timeout.tv_usec = INITIAL_TIMEOUT_USEC;
-
-    // Enviar requisição do arquivo e verificar se foi recebido
-    // ssize_t send(int sockfd, const void *buf, size_t len, int flags);
-    // ssize_t recv(int sockfd, void *buf, size_t len, int flags);
-    unsigned short int attempts = 0;
-    receiving_p.flag = REQ;
-    int recv_bytes, send_bytes;
-    bool flag_timeout = false;
-    fillPacket(&shipping_p, 0, REQ, payload.length(), payload.c_str());
-    while(attempts < 3 && receiving_p.flag != ACK && receiving_p.flag != FIN && receiving_p.flag != DATA) {
-        if (!flag_timeout) {
-            gettimeofday(&start, NULL);
-        }
-        send_bytes = (int)send(this->socket_fd, (Packet*)&shipping_p, sizeof(Packet), 0);
-        recv_bytes = (int)recv(this->socket_fd, (Packet*)&receiving_p, sizeof(Packet), 0);
-        if (recv_bytes < 0) {
-            flag_timeout = true;
-            std::cerr << "---------TIMEOUT----------" << std::endl;
-        } else {
-            printPacket(&receiving_p);
-            flag_timeout = false;
-            gettimeofday(&end, NULL);
-            update_timeout(&timeout, start, end);
-            std::cout << "Novo timeout: " <<  timeout.tv_sec << "." << std::setfill('0') << std::setw(6) << timeout.tv_usec << " segundos" << std::endl;
-            setsockopt(this->socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-        }
-        attempts++;
-        std::cout << "Tentativa: " << attempts << std::endl;
-    }
-    if (attempts == MAX_ATEMPTS) {
-        std::cout << "Número máximo de tentativas ocorridas!" << std::endl;
-        return false;
-    }
-    std::string file_name = payload.substr(4);
-    FILE* file = fopen(payload.substr(4).c_str(), "wb");
-    flag_timeout = false;
-    int ack_client = 0;
-    fillPacket(&shipping_p, ack_client, ACK, 0, (byte*)"\0");
-    do {
-        //processar o pacote recebido
-        if(receiving_p.flag == DATA) {
-            if(receiving_p.number == ack_client) {
-                fwrite(receiving_p.payload, 1, receiving_p.length, file);
-                ack_client += receiving_p.length;
-                // pacote a ser enviado
-                fillPacket(&shipping_p, ack_client, ACK, 0, (byte*)"\0");
-            }
-            // TODO criar um buffer e processar pacotes fora de ordem
-
-            // enviar o pacote resposta
-        } else if(receiving_p.flag == MSG) {
-
-        }
-
-        send_bytes = (int)send(this->socket_fd, (Packet*)&shipping_p, sizeof(Packet), 0);
-        recv_bytes = (int)recv(this->socket_fd, (Packet*)&receiving_p, sizeof(Packet), 0);
-    }while(receiving_p.flag != ACK && receiving_p.flag != FIN && receiving_p.flag != FIN_DATA); // pacotes que recebo e tenho que processar apenas uma vez
-
-    if(receiving_p.flag == ACK) {
-        return false;
-    } else if(receiving_p.flag == FIN_DATA) {
-        if (receiving_p.payload == get_file_sha256(file_name)) {
-            return true;
-        } else {
-            std::cout << "Falha na verificação SHA-256." << std::endl;
-            return false;
-        }
-    } else if(receiving_p.flag == FIN) {
-        fillPacket(&shipping_p, 0, FIN_ACK, 0, (byte*)"\0");
-        send_bytes = (int)send(this->socket_fd, (Packet*)&shipping_p, sizeof(Packet), 0);
-        Client::~Client();
-    }
-    return true;
-}
-
 void Client::handleIncomingData() {
+    char msg_failure[10] = "Failure\0";
     Packet receiving_p, shipping_p;
     ssize_t bytes_recv, bytes_send;
     FILE* file_write = NULL;
@@ -138,6 +59,10 @@ void Client::handleIncomingData() {
         if(bytes_recv < 0) {
             std::lock_guard<std::mutex> lock(mutex);
             std::cerr << "===========TIMEOUT===========" << std::endl;
+        } else if (bytes_recv == 0) {
+            std::cout << "Servidor está OFFLINE!\n";
+            exit(EXIT_FAILURE);
+            break;
         } else {
             switch(receiving_p.flag) {
                 case DATA:
@@ -162,8 +87,12 @@ void Client::handleIncomingData() {
                     break;
                 case FIN_DATA:
                     this->ack_client = 0;
+                    if(file_write != NULL) {
+                        this->ack_client = 0;
+                        fclose(file_write); 
+                    }
                     //não envio pacotes resposta
-                    if (receiving_p.payload == get_file_sha256(file_name)) {
+                    if (strcmp(receiving_p.payload, get_file_sha256(file_name).c_str()) == 0) {
                         std::cout << "Arquivo Verificado com HASH SHA-256." << std::endl;
                     } else {
                         std::cout << "Falha na verificação SHA-256." << std::endl;

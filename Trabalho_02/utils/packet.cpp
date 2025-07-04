@@ -5,6 +5,7 @@ void fillPacket(Packet* packet, unsigned int number, byte flag, unsigned short i
     packet->flag = flag;
     packet->length = length;
     strcpy(packet->payload, payload);
+    packet->payload[length] = '\0';
 }
 
 void fillPacket(Packet* packet, unsigned int number, byte flag, unsigned short int length, std::string payload) {

@@ -34,7 +34,7 @@
 ***********************************************************/
 
 #define MAX_CLIENT 3
-#define SERVER_PORT 12345
+#define SERVER_PORT 22222
 
 class Server {
 private:

@@ -59,7 +59,6 @@ public:
 
     void updateAddrServer(const std::string ipv4, const int port);
     const bool connectToServer();
-    const bool requestGET(const std::string payload);
     const bool requestIDT(const std::string payload);
     void requestMSG(const std::string payload);
     void handleIncomingData();

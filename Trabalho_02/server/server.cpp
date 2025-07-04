@@ -156,16 +156,16 @@ void Server::client_service(struct ClientData client) {
                             // FIN_DATA
                             if(this->map_sha256.find(file_name) == this->map_sha256.end()) {
                                 map_sha256.insert(std::make_pair(file_name, get_file_sha256(path)));
-                                fillPacket(&shipping_p, 0, FIN_DATA, 32, this->map_sha256[file_name]);
+                                fillPacket(&shipping_p, 0, FIN_DATA, this->map_sha256[file_name].size(), this->map_sha256[file_name]);
                             }
-                            fillPacket(&shipping_p, 0, FIN_DATA, 32, this->map_sha256[file_name]);
+                            fillPacket(&shipping_p, 0, FIN_DATA, this->map_sha256[file_name].size(), this->map_sha256[file_name]);
                         }
                     }
                     break;
                 default:
                     break;
             }
-            if(shipping_p.flag == ACK || shipping_p.flag == DATA || shipping_p.flag == MSG) {
+            if(shipping_p.flag == ACK || shipping_p.flag == DATA || shipping_p.flag == MSG || shipping_p.flag == FIN_DATA) {
                 bytes_send = send(client.fd, (Packet*)&shipping_p, sizeof(Packet), 0);
             }
         }
