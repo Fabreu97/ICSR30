@@ -1,0 +1,53 @@
+ENA
+
+Configure Terminal
+VLAN 2
+NAME Professores
+END
+
+Configure Terminal
+VLAN 3
+NAME Alunos
+END
+
+Configure Terminal
+INT F0/1
+Switchport Mode Access
+Switchport Access VLAN 2
+
+INT F0/2
+Switchport Mode Access
+Switchport Access VLAN 2
+
+INT F0/3
+Switchport Mode Access
+Switchport Access VLAN 3
+
+INT F0/4
+Switchport Mode Access
+Switchport Access VLAN 3
+
+END
+
+WR
+
+# Conectar os SWITCHS via Trunk
+# Primeiro no Switch 0
+
+Enable
+Configure Terminal
+INT f0/24
+Switchport mode trunk
+Switchport trunk allowed VLAN 2,3
+exit
+
+# Segundo Switch 1 fazer o mesmo
+
+Enable
+Configure Terminal
+INT f0/24
+Switchport mode trunk
+Switchport trunk allowed VLAN 2,3
+exit
+
+# Agora deletar a conexão entre os switchs e ligar cada switch no mesmo roteador e todos iram se comunicar

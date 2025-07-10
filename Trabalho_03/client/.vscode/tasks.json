@@ -1,0 +1,41 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build (Compilar)",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "all"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "detail": "Compila o projeto usando o alvo 'all' do Makefile."
+        },
+        {
+            "label": "Run (Executar)",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "run"
+            ],
+            "group": "test",
+            "detail": "Executa o projeto usando o alvo 'run' do Makefile."
+        },
+        {
+            "label": "Clean (Limpar)",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "clean"
+            ],
+            "group": "build",
+            "detail": "Limpa os arquivos gerados usando o alvo 'clean' do Makefile."
+        }
+    ]
+}

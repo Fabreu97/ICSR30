@@ -1,0 +1,80 @@
+# Registros de comandos
+
+## Parte 1:
+
+1) Configurar o Switch para ter duas VLANs pela interface de CLI:
+
+# Para sair do modo usuario e entrar no modo administrador(root)
+ENA
+
+# Um Painel de Controle dos SWITCHs CISCO
+CONFigure Terminal
+
+# Criar a VLAN com "id 2"
+VLAN 2
+
+# Para dar um nome para essa VLAN criada, neste caso 'Professores'
+NAME Professores
+
+# Sair do config-vlan
+END
+
+# Mostra como está configurado nossa VLAN
+SHOW VLAN BRIEF
+
+#Repetição para criar a VLAN Alunos
+Configure Terminal
+VLAN 3
+NAME Alunos
+END
+
+Configure Terminal
+
+# Para entrar em uma interface digitamos o comando INT + a interface:
+INT F0/1
+
+# Essa interface fica para VLAN dos Professores(id = 2)
+Switchport access VLAN 2
+
+# Repetir para interface 2
+Configure Terminal
+INT F0/2
+Switchport Access VLAN 2
+END
+
+# Colocar a interface 3 e 4 na VLAN Alunos(id = 3)
+Configure Terminal
+INT F0/3
+Switchport Access VLAN 3
+END
+
+Configure Terminal
+INT F0/4
+Switchport Access VLAN 3
+END
+
+# Apenas para conferir se está tudo correto
+# Show VLAN Brief
+
+# Outra forma de vializar as VLANs
+Show Run
+
+#Comando para salvar todas as alterações
+WR
+
+# Testei enviar um simples PDU e não conseguir e o CHATGPT recomendou eu configurar PCs
+# Seguir as instruções do video https://www.youtube.com/watch?v=CKqmVwJYL0M com resalva que em vez de servidor utilizei para os PCs
+
+# Clickei duas vezes no PC0 entrei CONFIG>INTERFACE>FASTETHERNET0
+ IP Configuration STATIC
+ IPv4 Address: 192.168.0.1
+ Subnet Mask: 255.255.255.0
+ 
+ # aos demais ultimo byte de endereço eu alterei quando estão na mesma subrede
+
+ 
+
+
+
+
+
